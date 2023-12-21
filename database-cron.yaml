@@ -1,0 +1,54 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: database-cron
+  namespace: default
+spec:
+  schedule: "0 4 * * *"
+  failedJobsHistoryLimit: 2
+  successfulJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: database-cron
+              image: registry/database-cron:v1
+              imagePullPolicy: "Always"
+              env:
+                - name: DB_HOST
+                  valueFrom:
+                    secretKeyRef:
+                      key: DB_HOST
+                      name: database-cron-env
+                      optional: false
+                - name: DB_NAME
+                  valueFrom:
+                    secretKeyRef:
+                      key: DB_NAME
+                      name: database-cron-env
+                      optional: false
+                - name: DB_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      key: DB_USERNAME
+                      name: database-cron-env
+                      optional: false
+                - name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      key: DB_PASSWORD
+                      name: database-cron-env
+                      optional: false
+                - name: SENTRY_CRONS
+                  value: https://o1110523.ingest.sentry.io/api/4506248238530560/cron/database-backup-jo/80236b43dffaa8cb050a23bc4fa3ab2d/?environment=prod
+              volumeMounts:
+                - mountPath: /mnt/backup
+                  name: database-cron-backup
+          imagePullSecrets:
+            - name: docker-registry
+          restartPolicy: OnFailure
+          volumes:
+            - name: database-cron-backup
+              persistentVolumeClaim:
+                claimName: database-cron-backup-pvc
